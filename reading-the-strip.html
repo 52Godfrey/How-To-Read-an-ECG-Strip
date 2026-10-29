@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reading the Strip</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400..800;1,8..60,400..800&display=swap">
+<style>
+/* Layout: single reading column on ECG paper; strips break wider and scroll inside their own frames on phones */
+:root{
+  --bg:#fdf8f7; --panel:#ffffff; --ink:#1f1a1c; --muted:#675c60; --line:#ecd9d6;
+  --grid-minor:#f4d3d0; --grid-major:#e6a19b; --trace:#1f1a1c;
+  --accent:#c4304a; --accent-soft:#fbe7ea;
+  --good:#2d7a57; --good-soft:#e3f2ea; --warn:#9c5c00; --warn-soft:#fbefd9; --crit:#c4304a; --crit-soft:#fbe7ea;
+  --f-display:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --f-body:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --f-mono:"Source Serif 4",Georgia,"Times New Roman",serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c1210; --panel:#121b18; --ink:#e2ebe7; --muted:#93a59f; --line:#22312c;
+  --grid-minor:#14201c; --grid-major:#21352e; --trace:#4be08f;
+  --accent:#ff7489; --accent-soft:#3a1a21;
+  --good:#5fd39a; --good-soft:#12291f; --warn:#f0b65a; --warn-soft:#2e2310; --crit:#ff7489; --crit-soft:#3a1a21;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1210; --panel:#121b18; --ink:#e2ebe7; --muted:#93a59f; --line:#22312c;
+  --grid-minor:#14201c; --grid-major:#21352e; --trace:#4be08f;
+  --accent:#ff7489; --accent-soft:#3a1a21;
+  --good:#5fd39a; --good-soft:#12291f; --warn:#f0b65a; --warn-soft:#2e2310; --crit:#ff7489; --crit-soft:#3a1a21;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:900px;margin:0 auto}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.15;margin:0}
+h1{font-size:clamp(40px,7vw,64px);font-weight:700;letter-spacing:-.015em}
+h2{font-size:32px;font-weight:700}
+h3{font-size:20px;font-weight:700;font-stretch:90%}
+p{margin:0;max-width:66ch}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lede{font-size:19px;color:var(--muted);max-width:60ch}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.themebtn{justify-self:start;display:inline-flex;align-items:center;gap:8px}
+.themebtn .dot{width:12px;height:12px;border-radius:50%;background:var(--ink);border:1px solid var(--line)}
+.steps{display:grid;gap:12px}
+.steps .q{display:grid;grid-template-columns:minmax(150px,210px) 1fr;gap:12px;padding-bottom:12px;border-bottom:1px dashed var(--line)}
+.steps .q:last-child{border-bottom:0;padding-bottom:0}
+.steps .q > div:first-child b{display:block}
+.ans{display:inline-block;margin-top:4px;font-weight:700;color:var(--accent)}
+@media (max-width:520px){.steps .q{grid-template-columns:1fr;gap:4px}}
+header.hero{padding-block:48px 28px;display:grid;gap:14px}
+nav.toc{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px)));padding:10px max(16px,env(safe-area-inset-left,0px))}
+nav.toc .inner{max-width:900px;margin:0 auto;display:flex;gap:6px;overflow-x:auto;scrollbar-width:thin}
+nav.toc a{flex:none;font-size:14px;color:var(--ink);text-decoration:none;padding:5px 11px;border:1px solid var(--line);border-radius:999px;background:var(--panel);white-space:nowrap}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
+section{padding-block:52px 8px;display:grid;gap:18px;scroll-margin-top:60px}
+section > .head{display:grid;gap:6px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.grid2>*,.grid3>*{min-width:0}
+ul,ol{margin:0;padding-left:1.25em;display:grid;gap:6px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:15px;min-width:560px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--f-display);font-weight:700;font-stretch:90%;font-size:14px;letter-spacing:.02em;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{display:inline-block;font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:4px}
+.tag.crit{background:var(--crit-soft);color:var(--crit)}
+.tag.warn{background:var(--warn-soft);color:var(--warn)}
+.tag.good{background:var(--good-soft);color:var(--good)}
+.callout{border-left:3px solid var(--accent);border-radius:0;padding:4px 0 4px 14px}
+.stripframe{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.stripframe svg{display:block;width:100%;min-width:640px;height:auto}
+.stripframe.click svg{cursor:crosshair}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chipgroup{display:grid;gap:6px;align-content:start}
+#libChips{align-items:start}
+.chips{align-content:flex-start;align-items:flex-start}
+.chipgroup .lbl{font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+button{font:inherit;font-size:14px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:6px 11px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.on{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.viewerhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px}
+.viewerhead h3{font-size:26px}
+.caliper{font-family:var(--f-mono);font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.caliper b{color:var(--ink);font-weight:600}
+dl.crit{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:0;font-size:15px}
+dl.crit dt{font-family:var(--f-display);font-weight:700;font-stretch:90%;color:var(--muted)}
+dl.crit dd{margin:0}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+.flow .step{flex:1 1 140px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;gap:4px;align-content:start}
+.flow .step .w{font-family:var(--f-mono);font-size:12px;color:var(--accent);letter-spacing:.04em}
+.flow .step b{font-family:var(--f-display);font-stretch:90%;font-size:16px}
+.flow .step span{font-size:14px;color:var(--muted)}
+ol.method{counter-reset:m;list-style:none;padding:0;display:grid;gap:10px}
+ol.method li{counter-increment:m;display:grid;grid-template-columns:36px 1fr;gap:10px;align-items:start}
+ol.method li::before{content:counter(m);font-family:var(--f-mono);font-weight:600;font-size:14px;width:30px;height:30px;border-radius:50%;border:1.5px solid var(--accent);color:var(--accent);display:grid;place-items:center}
+.algo{display:grid;gap:10px}
+.algo h3{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.quizbox{display:grid;gap:14px}
+.quizopts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.quizopts button{text-align:left;padding:10px 12px;font-size:15px}
+.quizopts button.right{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.quizopts button.wrong{background:var(--crit-soft);border-color:var(--crit);color:var(--crit)}
+.score{font-family:var(--f-mono);font-size:14px;color:var(--muted)}
+.memo{display:grid;gap:10px}
+.memo div{display:grid;grid-template-columns:minmax(120px,190px) 1fr;gap:12px;padding-bottom:10px;border-bottom:1px dashed var(--line)}
+.memo div:last-child{border-bottom:0}
+.memo b{font-family:var(--f-display);font-stretch:90%}
+.small{font-size:14px;color:var(--muted)}
+footer{margin-top:48px;padding-top:16px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
+@media (max-width:520px){.memo div{grid-template-columns:1fr;gap:2px} dl.crit{grid-template-columns:1fr;gap:0 0} dl.crit dd{margin-bottom:6px}}
+@media (prefers-reduced-motion:no-preference){button{transition:background .15s,border-color .15s,color .15s}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+<header class="hero">
+  <span class="eyebrow">N3230 · Cardiac monitoring study guide</span>
+  <h1>Reading the Strip</h1>
+  <p class="lede">Everything you need to read an electrocardiogram (ECG) as a nursing student: how the waves are made, how to measure them, the rhythms you'll see, the 12-lead changes that matter, and what to do at the bedside. Every strip on this page is drawn live, so click around and measure.</p>
+  <button type="button" id="themeBtn" class="themebtn"><span class="dot" aria-hidden="true"></span><span id="themeLbl">Switch to light mode</span></button>
+  <div id="heroStrip" class="stripframe" aria-hidden="true"></div>
+</header>
+</div>
+
+<nav class="toc" aria-label="Sections"><div class="inner">
+  <a href="#wiring">Wiring</a><a href="#beat">One beat</a><a href="#paper">Paper and rate</a><a href="#method">8-step method</a><a href="#worked">Worked example</a><a href="#library">Rhythm library</a><a href="#leads">Leads and 12-lead</a><a href="#ischemia">Ischemia</a><a href="#lytes">Electrolytes and drugs</a><a href="#artifact">Artifact</a><a href="#emergency">Emergencies</a><a href="#patient">Your CHF patient</a><a href="#quiz">Practice quiz</a><a href="#memory">Memory tricks</a>
+</div></nav>
+
+<main class="wrap">
+
+<section id="wiring">
+  <div class="head"><span class="eyebrow">01 · The electrical system</span><h2>Every wave is one step in the wiring</h2>
+  <p>An ECG doesn't show the heart squeezing. It shows electricity moving through it. Each wave lines up with one part of the conduction system, so when a wave looks wrong, you know which part of the wiring has the problem.</p></div>
+  <div class="flow">
+    <div class="step"><span class="w">fires first</span><b>Sinoatrial (SA) node</b><span>The natural pacemaker in the right atrium. Sets the rate at 60 to 100.</span></div>
+    <div class="step"><span class="w">P wave</span><b>Atria depolarize</b><span>Signal spreads across both atria and they contract.</span></div>
+    <div class="step"><span class="w">PR segment</span><b>Atrioventricular (AV) node</b><span>A built-in pause so the ventricles can fill. Heart blocks happen here.</span></div>
+    <div class="step"><span class="w">QRS complex</span><b>Bundle of His → Purkinje fibers</b><span>Signal races down the bundle branches and the ventricles contract.</span></div>
+    <div class="step"><span class="w">T wave</span><b>Ventricles repolarize</b><span>The ventricles reset and get ready for the next beat.</span></div>
+  </div>
+  <div class="grid2">
+    <div class="panel"><h3>Backup pacemakers</h3>
+      <p class="small" style="margin:6px 0 10px">If a higher site fails, the next one down takes over at its own, slower rate. The rate tells you where the beat is coming from.</p>
+      <div class="tablewrap" style="border:0"><table style="min-width:0"><thead><tr><th>Site</th><th>Rate</th><th>QRS</th></tr></thead><tbody>
+      <tr><td>Sinoatrial node</td><td class="num">60–100</td><td>Narrow, with a P wave</td></tr>
+      <tr><td>Atrioventricular junction</td><td class="num">40–60</td><td>Narrow, P wave missing or upside down</td></tr>
+      <tr><td>Ventricles</td><td class="num">20–40</td><td>Wide and bizarre</td></tr></tbody></table></div>
+    </div>
+    <div class="panel"><h3>Narrow vs wide QRS</h3>
+      <p style="margin-top:6px">A <b>narrow</b> QRS (under 0.12 seconds) means the beat traveled the normal highway down the bundle branches, so it started above the ventricles.</p>
+      <p style="margin-top:8px">A <b>wide</b> QRS means the beat started in the ventricles or took a detour, cell to cell. Wide and fast is the pattern to fear: think ventricular tachycardia until proven otherwise.</p>
+    </div>
+  </div>
+</section>
+
+<section id="beat">
+  <div class="head"><span class="eyebrow">02 · Anatomy of one beat</span><h2>The parts of a single beat</h2>
+  <p>Learn these names and normal values cold. Almost every rhythm question comes down to measuring one of them.</p></div>
+  <div class="stripframe" id="beatAnatomy"></div>
+  <div class="tablewrap"><table><thead><tr><th>Part</th><th>What it shows</th><th>Normal</th><th>Small boxes</th><th>Abnormal means</th></tr></thead><tbody>
+    <tr><td>P wave</td><td>Atria depolarizing</td><td class="num">upright, rounded</td><td class="num">—</td><td>Missing: atrial fibrillation or junctional rhythm. Sawtooth: atrial flutter. More P waves than QRS: heart block.</td></tr>
+    <tr><td>PR interval</td><td>Start of P to start of QRS (the AV node delay)</td><td class="num">0.12–0.20 s</td><td class="num">3–5</td><td>Longer than 0.20: first-degree block. Getting longer each beat: Wenckebach.</td></tr>
+    <tr><td>QRS complex</td><td>Ventricles depolarizing</td><td class="num">0.06–0.10 s</td><td class="num">under 3</td><td>0.12 or wider: ventricular beat, bundle branch block, high potassium, or pacing.</td></tr>
+    <tr><td>ST segment</td><td>Ventricles fully depolarized, resting before reset</td><td class="num">flat, on baseline</td><td class="num">—</td><td>Raised: active heart attack. Dipped: ischemia or digoxin.</td></tr>
+    <tr><td>T wave</td><td>Ventricles repolarizing</td><td class="num">upright, smooth</td><td class="num">—</td><td>Tall and peaked: high potassium. Flat: low potassium. Upside down: ischemia.</td></tr>
+    <tr><td>QT interval</td><td>Start of QRS to end of T (whole ventricular cycle)</td><td class="num">QTc under about 0.44–0.46 s</td><td class="num">about 9–11</td><td>Long: risk of torsades de pointes. Over 0.50 s is high risk. Amiodarone, ondansetron, low potassium or magnesium or calcium.</td></tr>
+    <tr><td>U wave</td><td>Late repolarization</td><td class="num">tiny or absent</td><td class="num">—</td><td>Prominent U wave: low potassium.</td></tr>
+  </tbody></table></div>
+  <p class="small">QTc means the QT corrected for heart rate. A faster heart naturally shortens the QT, so monitors and 12-lead machines report the corrected number.</p>
+</section>
+
+<section id="paper">
+  <div class="head"><span class="eyebrow">03 · The paper and the rate</span><h2>Measuring on the grid</h2>
+  <p>Standard ECG paper runs at 25 millimeters per second. Every box is a fixed amount of time, so you measure intervals by counting boxes.</p></div>
+  <div class="grid3">
+    <div class="panel"><span class="eyebrow">small box</span><h3 class="mono" style="font-family:var(--f-mono);font-size:24px">0.04 s</h3><p class="small">1 millimeter wide. Vertically, 0.1 millivolt.</p></div>
+    <div class="panel"><span class="eyebrow">large box</span><h3 class="mono" style="font-family:var(--f-mono);font-size:24px">0.20 s</h3><p class="small">5 small boxes. 5 large boxes = 1 second.</p></div>
+    <div class="panel"><span class="eyebrow">6-second strip</span><h3 class="mono" style="font-family:var(--f-mono);font-size:24px">30 large</h3><p class="small">Monitor strips often print hash marks every 3 seconds.</p></div>
+  </div>
+  <h3>Three ways to calculate heart rate</h3>
+  <div class="grid3">
+    <div class="panel"><h3 style="font-size:17px">6-second method</h3><p style="margin-top:6px">Count the QRS complexes in 6 seconds and multiply by 10.</p><p class="small" style="margin-top:6px">Best for irregular rhythms like atrial fibrillation. Fast, but an estimate.</p></div>
+    <div class="panel"><h3 style="font-size:17px">Sequence method</h3><p style="margin-top:6px">Find an R wave on a heavy line. Count the next heavy lines: <span class="mono">300, 150, 100, 75, 60, 50</span>. Where the next R lands is the rate.</p><p class="small" style="margin-top:6px">Quick at the bedside. Regular rhythms only.</p></div>
+    <div class="panel"><h3 style="font-size:17px">1500 method</h3><p style="margin-top:6px">Count small boxes between two R waves. Rate = <span class="mono">1500 ÷ boxes</span>.</p><p class="small" style="margin-top:6px">Most precise. Example: 20 boxes → 75 per minute. Regular rhythms only.</p></div>
+  </div>
+  <p class="callout">Try it: in the rhythm library below, click two R waves on any strip and the calipers will tell you the time between them, the number of small boxes, and the rate.</p>
+</section>
+
+<section id="method">
+  <div class="head"><span class="eyebrow">04 · The systematic method</span><h2>Read every strip in the same order</h2>
+  <p>When you panic, you skip steps. A fixed order keeps you from jumping to a diagnosis. Always look at the patient first.</p></div>
+  <ol class="method">
+    <li><div><b>Check the patient.</b> Pulse, responsiveness, BP. A scary strip on a talking patient may be artifact. A "normal" strip on a pulseless patient is pulseless electrical activity.</div></li>
+    <li><div><b>Rate.</b> Under 60 is bradycardia, over 100 is tachycardia. Check both atrial (P) and ventricular (QRS) rates if they differ.</div></li>
+    <li><div><b>Rhythm.</b> Are the R-to-R distances even? Regular, regularly irregular (a pattern), or irregularly irregular (no pattern at all)?</div></li>
+    <li><div><b>P waves.</b> Present? Upright? One before every QRS? Same shape every time?</div></li>
+    <li><div><b>PR interval.</b> 0.12–0.20 seconds? The same every beat, or changing?</div></li>
+    <li><div><b>QRS width.</b> Narrow (under 0.12) or wide?</div></li>
+    <li><div><b>ST segment, T waves, QT.</b> Raised, dipped, peaked, flat, inverted, long?</div></li>
+    <li><div><b>Name it, then decide.</b> Name the rhythm, then ask: is the patient stable or unstable? That answer decides what you do next.</div></li>
+  </ol>
+</section>
+
+<section id="worked">
+  <div class="head"><span class="eyebrow">05 · Worked example</span><h2>Reading a strip, one question at a time</h2>
+  <p>This is the same strip style as your worksheet. Answer the questions in order and the interpretation falls out at the end. Every number below is counted right off the grid.</p></div>
+  <div class="stripframe" id="workedStrip"></div>
+  <p class="small">Zoomed in so you can count: each small box here is 0.04 seconds, each large box (5 small) is 0.20 seconds.</p>
+  <div class="panel steps">
+    <div class="q"><div><b>Rate?</b></div><div>
+      <ol>
+        <li>Find an R wave (the tall spike), ideally one sitting on a grid line.</li>
+        <li>Count the small boxes to the next R wave. Here: <b>35 small boxes</b>.</li>
+        <li>Divide 1500 by that number: <span class="mono">1500 ÷ 35 ≈ 43</span>.</li>
+      </ol>
+      <p class="small" style="margin-top:6px">Why 1500? The paper moves 1500 small boxes every minute (25 per second × 60 seconds). Dividing by the boxes in one beat tells you how many beats fit in a minute.</p>
+      <p class="small" style="margin-top:6px">Faster with large boxes: 35 small boxes = 7 large boxes, and <span class="mono">300 ÷ 7 ≈ 43</span>. Same answer.</p>
+      <span class="ans">About 43 per minute. Under 60, so bradycardia.</span></div></div>
+    <div class="q"><div><b>Regular?</b></div><div>Measure the next R-to-R gap the same way. If every gap is the same (within about 1 to 3 small boxes), it's regular. Here both gaps are 35 small boxes.<br><span class="ans">Yes, regular.</span></div></div>
+    <div class="q"><div><b>P wave for every QRS?</b></div><div>Look just in front of each tall spike for a small rounded bump. Check that every QRS has one, that they're upright and the same shape, and that there are no extra P waves standing alone.<br><span class="ans">Yes, one P before every QRS.</span></div></div>
+    <div class="q"><div><b>PR interval under 0.20?</b></div><div>Count from where the P wave starts to where the QRS starts. Here: <b>4 small boxes</b>, so <span class="mono">4 × 0.04 = 0.16 seconds</span>. Check that it's the same on every beat.<br><span class="ans">Yes, 0.16 seconds, normal and constant.</span></div></div>
+    <div class="q"><div><b>Narrow QRS?</b></div><div>Count the width of the spike from where it leaves the baseline to where it returns. Here: <b>2 small boxes</b>, so <span class="mono">0.08 seconds</span>. Under 3 boxes (0.12 seconds) is narrow.<br><span class="ans">Yes, narrow.</span></div></div>
+    <div class="q"><div><b>Interpret the rhythm</b></div><div>Everything matches normal sinus rhythm except the rate. When every beat is normal and only the rate is off, name it a sinus rhythm by its rate.<br><span class="ans">Sinus bradycardia.</span></div></div>
+  </div>
+  <div class="grid2">
+    <div class="panel" style="display:grid;gap:8px"><h3>Quick lookup: small boxes between R waves</h3>
+      <div class="tablewrap" style="border:0"><table style="min-width:0"><thead><tr><th>Small boxes</th><th>Large boxes</th><th>Rate</th><th>Category</th></tr></thead><tbody>
+        <tr><td class="num">10</td><td class="num">2</td><td class="num">150</td><td>Tachycardia</td></tr>
+        <tr><td class="num">15</td><td class="num">3</td><td class="num">100</td><td>Upper limit of normal</td></tr>
+        <tr><td class="num">20</td><td class="num">4</td><td class="num">75</td><td>Normal</td></tr>
+        <tr><td class="num">25</td><td class="num">5</td><td class="num">60</td><td>Lower limit of normal</td></tr>
+        <tr><td class="num">30</td><td class="num">6</td><td class="num">50</td><td>Bradycardia</td></tr>
+        <tr><td class="num">35</td><td class="num">7</td><td class="num">43</td><td>Bradycardia (this strip)</td></tr>
+      </tbody></table></div></div>
+    <div class="panel" style="display:grid;gap:8px"><h3>Counting tips</h3>
+      <ul>
+        <li>Count from the peak of one R wave to the peak of the next, not from the base.</li>
+        <li>If an R wave lands between lines, estimate the partial box. Being off by one box only shifts the rate by a beat or two at slow rates.</li>
+        <li>Use the 1500 method only when the rhythm is regular. For an irregular rhythm like atrial fibrillation, count the QRS complexes in 6 seconds and multiply by 10.</li>
+        <li>The same rule names all three sinus rhythms: under 60 is sinus bradycardia, 60 to 100 is normal sinus rhythm, over 100 is sinus tachycardia.</li>
+      </ul></div>
+  </div>
+</section>
+
+<section id="library">
+  <div class="head"><span class="eyebrow">06 · Rhythm library</span><h2>Rhythms you need to recognize</h2>
+  <p>Pick a rhythm. Each one shows the criteria from the 8-step method, the usual causes, and the nursing action. Click two points on the strip to measure.</p></div>
+  <div id="libChips" class="grid2" style="gap:12px"></div>
+  <div class="panel" style="display:grid;gap:14px">
+    <div class="viewerhead"><h3 id="libName">Normal sinus rhythm</h3><span id="libTag"></span></div>
+    <div class="stripframe click" id="libStrip"></div>
+    <div class="caliper" id="libCal"><span>Calipers: click two points on the strip.</span></div>
+    <div class="grid2">
+      <div><dl class="crit" id="libCrit"></dl></div>
+      <div style="display:grid;gap:12px;align-content:start">
+        <div><b>Causes</b><p id="libCause" class="small" style="color:var(--ink)"></p></div>
+        <div><b>Nursing action</b><p id="libAct" style="font-size:15px"></p></div>
+        <div id="libChfWrap"><b>In your heart failure patient</b><p id="libChf" style="font-size:15px"></p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="leads">
+  <div class="head"><span class="eyebrow">07 · Leads</span><h2>Where the stickers go, and what each lead sees</h2>
+  <p>Each lead is a camera angle on the heart. A bedside monitor uses 3 or 5 electrodes and shows one or two angles. A 12-lead uses 10 electrodes to build 12 views, which is how you find where a heart attack is.</p></div>
+  <div class="grid2">
+    <div class="panel" style="display:grid;gap:8px"><h3>5-lead monitor (United States colors)</h3>
+      <ul>
+        <li><b>White on the right</b>: right upper chest, below the clavicle</li>
+        <li><b>Black</b>: left upper chest. "Smoke over fire": black sits above red.</li>
+        <li><b>Red</b>: left lower chest or abdomen</li>
+        <li><b>Green</b>: right lower chest or abdomen. "Snow over grass": white sits above green.</li>
+        <li><b>Brown</b>: chest, usually the V1 position</li>
+      </ul>
+      <p class="small">Lead II is the default monitoring lead because it shows the clearest P waves.</p>
+    </div>
+    <div class="panel" style="display:grid;gap:8px"><h3>12-lead chest electrodes</h3>
+      <ul>
+        <li><b>V1</b>: 4th intercostal space, right of the sternum</li>
+        <li><b>V2</b>: 4th intercostal space, left of the sternum</li>
+        <li><b>V3</b>: halfway between V2 and V4</li>
+        <li><b>V4</b>: 5th intercostal space, midclavicular line</li>
+        <li><b>V5</b>: same level as V4, anterior axillary line</li>
+        <li><b>V6</b>: same level as V4, midaxillary line</li>
+      </ul>
+      <p class="small">Plus four limb electrodes. Have the patient lie still, flat or semi-Fowler's, and get it done within 10 minutes of chest pain.</p>
+    </div>
+  </div>
+  <div class="tablewrap"><table><thead><tr><th>Wall of the heart</th><th>Leads</th><th>Usual artery</th><th>What to watch for</th></tr></thead><tbody>
+    <tr><td>Inferior</td><td class="num">II, III, aVF</td><td>Right coronary artery</td><td>Bradycardia and heart blocks (it feeds the SA and AV nodes). Check for right ventricle involvement: these patients drop their BP with nitroglycerin.</td></tr>
+    <tr><td>Septal</td><td class="num">V1, V2</td><td>Left anterior descending</td><td>Bundle branch blocks</td></tr>
+    <tr><td>Anterior</td><td class="num">V3, V4</td><td>Left anterior descending</td><td>The "widow maker." Large area of muscle: heart failure, cardiogenic shock, ventricular arrhythmias.</td></tr>
+    <tr><td>Lateral</td><td class="num">I, aVL, V5, V6</td><td>Circumflex</td><td>Often paired with anterior changes</td></tr>
+    <tr><td>Posterior</td><td class="num">ST depression in V1–V3</td><td>Right coronary or circumflex</td><td>Easy to miss. The mirror image shows up as depression in the front leads.</td></tr>
+  </tbody></table></div>
+  <p class="small">aVR, aVL and aVF are "augmented" limb leads: augmented vector right, left, and foot.</p>
+</section>
+
+<section id="ischemia">
+  <div class="head"><span class="eyebrow">08 · Ischemia and infarction</span><h2>Spotting a heart attack</h2>
+  <p>Ischemia means heart muscle isn't getting enough oxygen. Infarction means it's dying. The ST segment and T wave tell you which, and the leads tell you where.</p></div>
+  <div id="ischChips" class="chips"></div>
+  <div class="panel" style="display:grid;gap:12px">
+    <div class="viewerhead"><h3 id="ischName"></h3><span id="ischTag"></span></div>
+    <div class="stripframe" id="ischStrip"></div>
+    <div class="grid2"><div><b>What you see</b><p id="ischSee" style="font-size:15px"></p></div><div><b>What it means and what you do</b><p id="ischDo" style="font-size:15px"></p></div></div>
+  </div>
+  <div class="grid2">
+    <div class="panel" style="display:grid;gap:8px"><h3>How a STEMI evolves</h3>
+      <ol><li>Minutes: tall, broad "hyperacute" T waves</li><li>Minutes to hours: ST elevation</li><li>Hours to days: Q waves form (dead muscle)</li><li>Days to weeks: T waves invert, ST returns to baseline</li></ol>
+      <p class="small">STEMI means ST-elevation myocardial infarction: at least 1 millimeter of ST elevation in 2 leads that look at the same wall. Leads on the opposite side often show "reciprocal" ST depression.</p>
+    </div>
+    <div class="panel" style="display:grid;gap:8px"><h3>Rules that trip students up</h3>
+      <ul><li>A normal ECG does not rule out a heart attack. Troponin does, usually repeated over several hours.</li><li>NSTEMI (non-ST-elevation myocardial infarction) has ST depression or T inversion plus a rising troponin.</li><li>Unstable angina has symptoms but a normal troponin.</li><li>For a STEMI, time is muscle: the goal is the cardiac catheterization lab within 90 minutes of arrival.</li></ul>
+    </div>
+  </div>
+</section>
+
+<section id="lytes">
+  <div class="head"><span class="eyebrow">09 · Electrolytes and drugs</span><h2>Lab values you can see on the strip</h2>
+  <p>Potassium, calcium and magnesium all change the shape of the waves. The strip gives you the hint; the lab confirms it.</p></div>
+  <div id="lyteChips" class="chips"></div>
+  <div class="panel" style="display:grid;gap:12px">
+    <div class="viewerhead"><h3 id="lyteName"></h3><span id="lyteTag"></span></div>
+    <div class="stripframe" id="lyteStrip"></div>
+    <div class="grid2"><div><b>What you see</b><p id="lyteSee" style="font-size:15px"></p></div><div><b>What it means and what you do</b><p id="lyteDo" style="font-size:15px"></p></div></div>
+  </div>
+  <div class="tablewrap"><table><thead><tr><th>Problem</th><th>Strip change</th><th>Memory hook</th></tr></thead><tbody>
+    <tr><td>High potassium (above 5.0)</td><td>Peaked T, then flat P, wide QRS, then a sine-wave pattern, then arrest</td><td>Tall tent: "the T is pitching a tent"</td></tr>
+    <tr><td>Low potassium (below 3.5)</td><td>Flat T, U wave, ST depression, ectopic beats</td><td>"No pot, no tea, but a U"</td></tr>
+    <tr><td>Low calcium</td><td>Long QT (long flat ST segment)</td><td>Low calcium, long QT</td></tr>
+    <tr><td>High calcium</td><td>Short QT</td><td>High calcium, hurried QT</td></tr>
+    <tr><td>Low magnesium</td><td>Looks like low potassium, long QT, torsades</td><td>Replace magnesium or potassium won't stay up</td></tr>
+    <tr><td>Digoxin effect</td><td>Scooped, sagging ST segment</td><td>"Salvador Dalí mustache"</td></tr>
+  </tbody></table></div>
+</section>
+
+<section id="artifact">
+  <div class="head"><span class="eyebrow">10 · Artifact</span><h2>Treat the patient, not the monitor</h2>
+  <p>Artifact is electrical noise that isn't from the heart. It can look exactly like ventricular fibrillation. Always check the patient before you call a code.</p></div>
+  <div class="grid2">
+    <div class="panel" style="display:grid;gap:8px"><h3>Common causes</h3><ul><li>Patient moving, brushing teeth, shivering, seizing</li><li>Loose, dried-out or badly placed electrodes</li><li>Electrical interference from nearby equipment</li><li>Sweaty or hairy skin</li></ul></div>
+    <div class="panel" style="display:grid;gap:8px"><h3>What to do</h3><ul><li>Look at the patient. Talking and alert means it isn't ventricular fibrillation.</li><li>Check a pulse and switch to another lead.</li><li>"Asystole" with a responsive patient usually means a lead fell off.</li><li>Clean and dry the skin, clip hair, replace electrodes every 24 hours or per policy.</li></ul></div>
+  </div>
+</section>
+
+<section id="emergency">
+  <div class="head"><span class="eyebrow">11 · Emergency response</span><h2>What happens when the rhythm is dangerous</h2>
+  <p>As a student nurse you won't run the code, but you need to know what's coming so you can act fast: call for help, start CPR, bring the crash cart, and anticipate the drugs. Doses follow American Heart Association Advanced Cardiovascular Life Support (ACLS) guidance; always follow your facility's protocol.</p></div>
+  <div class="panel" style="display:grid;gap:8px"><h3>First question every time: does the patient have a pulse?</h3>
+    <div class="grid3">
+      <div><span class="tag crit">no pulse</span><p style="margin-top:6px">Cardiac arrest algorithm. Start CPR now.</p></div>
+      <div><span class="tag warn">pulse, unstable</span><p style="margin-top:6px">Low BP, confusion, shock, chest pain, or acute heart failure. Electricity or drugs now.</p></div>
+      <div><span class="tag good">pulse, stable</span><p style="margin-top:6px">Time to get a 12-lead, labs, and provider orders.</p></div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="panel algo"><h3>Pulseless: shockable <span class="tag crit">VF · pulseless VT</span></h3>
+      <ol><li>Call a code, start high-quality CPR, attach the defibrillator</li><li>Defibrillate (unsynchronized shock)</li><li>CPR for 2 minutes, then rhythm check</li><li>Epinephrine 1 mg IV every 3–5 minutes</li><li>Amiodarone 300 mg IV, then 150 mg if it continues</li></ol></div>
+    <div class="panel algo"><h3>Pulseless: not shockable <span class="tag crit">asystole · PEA</span></h3>
+      <ol><li>Start CPR right away. Never shock asystole.</li><li>Epinephrine 1 mg IV as soon as possible, then every 3–5 minutes</li><li>Check the rhythm every 2 minutes</li><li>Look for reversible causes (the H's and T's below)</li></ol>
+      <p class="small">PEA is pulseless electrical activity: an organized rhythm on the monitor with no pulse.</p></div>
+    <div class="panel algo"><h3>Bradycardia with a pulse <span class="tag warn">symptomatic</span></h3>
+      <ol><li>Oxygen if SpO2 is low, IV access, 12-lead</li><li>Atropine 1 mg IV, repeat every 3–5 minutes, maximum 3 mg</li><li>If atropine fails: transcutaneous pacing, or a dopamine or epinephrine drip</li></ol>
+      <p class="small">Atropine often won't work in Mobitz type II or third-degree block, so get the pacing pads on early.</p></div>
+    <div class="panel algo"><h3>Tachycardia with a pulse <span class="tag warn">rate above 150</span></h3>
+      <ol><li>Unstable: synchronized cardioversion</li><li>Stable, narrow, regular (SVT): vagal maneuvers, then adenosine 6 mg rapid IV push with a fast saline flush, then 12 mg if needed</li><li>Stable, narrow, irregular (atrial fibrillation): rate control with beta blocker or amiodarone per order</li><li>Stable, wide: amiodarone 150 mg IV over 10 minutes, and get expert help</li></ol></div>
+  </div>
+  <div class="grid2">
+    <div class="panel" style="display:grid;gap:8px"><h3>Synchronized vs unsynchronized</h3>
+      <p><b>Synchronized cardioversion</b> times the shock to the R wave so it doesn't land on the T wave. Use it when there's a pulse. Many machines turn sync off after each shock, so press it again.</p>
+      <p><b>Defibrillation</b> is unsynchronized. Use it for ventricular fibrillation and pulseless ventricular tachycardia, where there is no organized R wave to sync to.</p>
+    </div>
+    <div class="panel" style="display:grid;gap:8px"><h3>Reversible causes: H's and T's</h3>
+      <div class="grid2" style="gap:8px">
+        <ul><li>Hypovolemia</li><li>Hypoxia</li><li>Hydrogen ion (acidosis)</li><li>Hypo- or hyperkalemia</li><li>Hypothermia</li></ul>
+        <ul><li>Tension pneumothorax</li><li>Tamponade (cardiac)</li><li>Toxins</li><li>Thrombosis, pulmonary</li><li>Thrombosis, coronary</li></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="patient">
+  <div class="head"><span class="eyebrow">12 · Apply it</span><h2>Your simulation patient's meds on the monitor</h2>
+  <p>Your heart failure and coronary artery disease patient takes drugs that change the ECG. Know what each one can do so you recognize it when it shows up.</p></div>
+  <div class="tablewrap"><table><thead><tr><th>Medication</th><th>What it can do to the strip</th><th>What to check</th></tr></thead><tbody>
+    <tr><td>Metoprolol</td><td>Sinus bradycardia, longer PR, heart blocks</td><td>Apical pulse for 1 minute. Hold if HR under 55 or hypotensive.</td></tr>
+    <tr><td>Amiodarone</td><td>Long QT, bradycardia, heart blocks, torsades de pointes</td><td>Continuous monitoring, QT interval, potassium and magnesium</td></tr>
+    <tr><td>Furosemide</td><td>Low potassium and magnesium: flat T, U waves, ectopic beats, arrhythmias</td><td>Potassium and magnesium before giving</td></tr>
+    <tr><td>Spironolactone</td><td>High potassium: peaked T, wide QRS</td><td>Hold if potassium above 5.5</td></tr>
+    <tr><td>Regular insulin</td><td>Pushes potassium into cells, so it can lower potassium</td><td>Glucose and potassium</td></tr>
+    <tr><td>Amlodipine</td><td>Reflex sinus tachycardia</td><td>BP and HR</td></tr>
+    <tr><td>Ondansetron (if ordered)</td><td>Long QT. Risky stacked on amiodarone.</td><td>Ask about QT before giving</td></tr>
+  </tbody></table></div>
+  <div class="panel" style="display:grid;gap:8px"><h3>The HR 160 scenario, read with the method</h3>
+    <ol><li><b>Patient:</b> talking, alert, BP 133/93, SpO2 90%, palpitations, dizzy. Has a pulse, stable but symptomatic.</li>
+    <li><b>Rate:</b> 160, tachycardia.</li>
+    <li><b>Rhythm and QRS:</b> regular and narrow points to SVT. Irregular and narrow points to atrial fibrillation with rapid ventricular response. Wide points to ventricular tachycardia.</li>
+    <li><b>Do:</b> stay, call for help, oxygen, 12-lead, crash cart nearby, potassium and magnesium, SBAR (Situation, Background, Assessment, Recommendation) for rate or rhythm control orders.</li>
+    <li><b>If he becomes unstable:</b> expect synchronized cardioversion.</li></ol>
+  </div>
+</section>
+
+<section id="quiz">
+  <div class="head"><span class="eyebrow">13 · Practice</span><h2>Name that strip</h2>
+  <p>Run the 8-step method in your head, then pick an answer. Questions are drawn from every rhythm and lab change on this page.</p></div>
+  <div class="panel quizbox">
+    <div class="viewerhead"><span class="score" id="qScore">Question 1 · Score 0 of 0</span><button id="qNext" class="primary">Next strip</button></div>
+    <div class="stripframe click" id="qStrip"></div>
+    <div class="caliper" id="qCal"><span>Calipers: click two points on the strip.</span></div>
+    <div class="quizopts" id="qOpts"></div>
+    <p id="qMsg" class="small" role="status"></p>
+    <div id="qExplain" style="font-size:15px"></div>
+  </div>
+</section>
+
+<section id="memory">
+  <div class="head"><span class="eyebrow">14 · Memory tricks</span><h2>Cheat sheet</h2></div>
+  <div class="panel memo">
+    <div><b>First-degree block</b><span>"If the R is far from P, then you have a first degree." PR over 0.20, every P conducts.</span></div>
+    <div><b>Wenckebach (type I)</b><span>"Longer, longer, longer, drop, then you have a Wenckebach."</span></div>
+    <div><b>Mobitz type II</b><span>"If some P's don't get through, then you have a Mobitz II." PR stays the same, then a QRS suddenly drops.</span></div>
+    <div><b>Third-degree block</b><span>"If P's and Q's don't agree, then you have a third degree." P waves and QRS complexes march independently.</span></div>
+    <div><b>Atrial fibrillation</b><span>Irregularly irregular, no P waves, wavy baseline.</span></div>
+    <div><b>Atrial flutter</b><span>Sawtooth "F waves" between QRS complexes.</span></div>
+    <div><b>Leads</b><span>White on the right. Smoke over fire. Snow over grass.</span></div>
+    <div><b>Potassium</b><span>Peaked T means high. U wave means low.</span></div>
+    <div><b>Shocks</b><span>Sync if there's a pulse. Unsync (defibrillate) if there's no pulse. Never shock asystole.</span></div>
+    <div><b>Wide and fast</b><span>Treat it as ventricular tachycardia until proven otherwise.</span></div>
+  </div>
+  <footer>Study aid for nursing coursework. Waveforms are simplified teaching drawings, not real patient tracings. Always follow your program's teaching, your facility's protocols, and current American Heart Association guidelines.</footer>
+</section>
+</main>
+
+<script>
+(function(){
+const PX=150, MV=60, BASE=120, W=1000, H=180, D=W/PX;
+const gs=(t,c,a,w)=>a*Math.exp(-((t-c)*(t-c))/(2*w*w));
+const DEF={p:.15,pr:.16,pw:.025,qrs:'n',qamp:-.1,ramp:1.2,samp:-.25,qw:.012,st:0,stc:.12,stw:.05,t:.3,tc:.26,tw:.05,u:0,uc:.46};
+const WIDE={qrs:'w',p:0,t:-.35,tc:.34,tw:.07};
+let seed=11; const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+function beatV(d,o){let v=0;
+  if(o.p) v+=gs(d,.01-o.pr,o.p,o.pw);
+  if(o.qrs==='n'){v+=gs(d,-.025,o.qamp,o.qw)+gs(d,0,o.ramp,o.qw)+gs(d,.025,o.samp,o.qw)}
+  else if(o.qrs==='w'){v+=gs(d,0,o.ramp,.035)+gs(d,.09,-.55,.045)}
+  if(o.qrs!=='none'){if(o.st)v+=gs(d,o.stc,o.st,o.stw);v+=gs(d,o.tc,o.t,o.tw);if(o.u)v+=gs(d,o.uc,o.u,.04)}
+  return v}
+const reg=(rr,o,s=.35)=>{const e=[];for(let t=s;t<D+.6;t+=rr)e.push({t,o});return e};
+function cyc(list,start=.35){const e=[];let t=start,i=0;while(t<D+.6){const c=list[i%list.length];e.push({t:t+(c.dt||0),o:c.o});t+=c.step;i++}return e}
+function pTrain(pp,pattern,start=.3){const e=[];let pc=start,i=0;while(pc<D+.6){const pr=pattern[i%pattern.length];
+  if(pr===null)e.push({t:pc-.01+.16,o:{qrs:'none',pr:.16}});else e.push({t:pc-.01+pr,o:{pr}});pc+=pp;i++}return e}
+const EX={
+  fib:t=>.05*Math.sin(2*Math.PI*7*t)+.035*Math.sin(2*Math.PI*11.3*t+1)+.02*Math.sin(2*Math.PI*5.2*t+2),
+  flutter:t=>{const f=((t+.05)/.2)%1;return f<.75?.12-.32*(f/.75):-.2+.32*((f-.75)/.25)},
+  vf:t=>.38*Math.sin(2*Math.PI*5.1*t+.5)*(.55+.45*Math.sin(2*Math.PI*.6*t))+.24*Math.sin(2*Math.PI*7.3*t+1.3)+.14*Math.sin(2*Math.PI*3.1*t+2),
+  tors:t=>Math.sin(2*Math.PI*4.4*t)*(.18+1.0*Math.abs(Math.sin(Math.PI*t/1.9))),
+  asy:t=>.03*Math.sin(2*Math.PI*.3*t)+.015*Math.sin(2*Math.PI*1.7*t)
+};
+/* ---------- rhythm library ---------- */
+const RH=[
+ {k:'nsr',g:'Sinus',n:'Normal sinus rhythm',sev:'good',gen:()=>reg(.8,{}),c:['60–100','Regular','Upright, one before every QRS','0.12–0.20 s','Narrow'],cause:'The normal rhythm.',act:'No treatment. Use it as your baseline to compare against.'},
+ {k:'sb',g:'Sinus',n:'Sinus bradycardia',sev:'warn',gen:()=>reg(1.35,{}),c:['Under 60','Regular','Normal','Normal','Narrow'],cause:'Beta blockers, amiodarone, digoxin, sleep, athletes, hypothermia, inferior heart attack, vagal stimulation.',act:'Check BP and symptoms (dizziness, confusion, hypotension). If symptomatic: hold rate-lowering meds, call the provider, atropine per order.',chf:'Metoprolol plus amiodarone can stack. Check the apical pulse before each dose.'},
+ {k:'st',g:'Sinus',n:'Sinus tachycardia',sev:'warn',gen:()=>reg(.5,{tc:.22}),c:['101–150 (usually)','Regular','Normal (may merge into the T wave)','Normal','Narrow'],cause:'A response to something: pain, fever, anxiety, low oxygen, dehydration, bleeding, worsening heart failure, stimulants.',act:'Find and treat the cause. Slowing the rate without fixing the cause can be harmful.',chf:'Could be decompensating heart failure, low oxygen, or over-diuresis. Check lung sounds, weight, and intake and output.'},
+ {k:'sa',g:'Sinus',n:'Sinus arrhythmia',sev:'good',gen:()=>{const e=[];let t=.35,i=0;while(t<D+.6){e.push({t,o:{}});t+=.8+.25*Math.sin(i*.9);i++}return e},c:['60–100','Irregular, speeds up and slows with breathing','Normal','Normal','Narrow'],cause:'Normal variation with breathing, common in young people.',act:'Usually no treatment.'},
+ {k:'pac',g:'Atrial',n:'Premature atrial contraction (PAC)',sev:'good',gen:()=>cyc([{step:.8,o:{}},{step:.8,o:{}},{step:.48,o:{}},{step:.85,o:{p:.22,pw:.018,pr:.14}}]),c:['Underlying rate','Irregular where the early beat occurs','Early P wave, different shape','May differ','Narrow'],cause:'Stress, caffeine, nicotine, stretched atria (heart failure), low potassium or magnesium.',act:'Usually harmless. Frequent PACs can lead to atrial fibrillation, so check electrolytes.'},
+ {k:'af',g:'Atrial',n:'Atrial fibrillation (controlled)',sev:'warn',ex:'fib',gen:()=>{seed=5;const e=[];let t=.3;while(t<D+.6){e.push({t,o:{p:0}});t+=.55+.5*rnd()}return e},c:['Under 100','Irregularly irregular','None. Wavy, quivering baseline','Cannot measure','Narrow'],cause:'Heart failure, coronary disease, hypertension, valve disease, older age, alcohol, hyperthyroidism, after surgery.',act:'Monitor rate, assess for stroke signs. Expect anticoagulation, since blood pools in the quivering atria and can clot.',chf:'Losing the atrial "kick" drops cardiac output by up to about 25%, which can tip heart failure into decompensation.'},
+ {k:'afr',g:'Atrial',n:'Atrial fibrillation with rapid ventricular response (RVR)',sev:'crit',ex:'fib',gen:()=>{seed=9;const e=[];let t=.3;while(t<D+.6){e.push({t,o:{p:0,tc:.22,tw:.04}});t+=.3+.2*rnd()}return e},c:['Over 100 (often 120–180)','Irregularly irregular','None. Wavy baseline','Cannot measure','Narrow'],cause:'Same as atrial fibrillation, triggered by stress, infection, fluid overload, low potassium or magnesium.',act:'Stable: rate control per order (beta blocker, amiodarone; diltiazem is avoided in heart failure with reduced ejection fraction). Unstable: synchronized cardioversion.',chf:'Very likely in your HR 160 scenario. Fast and irregular means poor filling, low output, worsening congestion.'},
+ {k:'fl',g:'Atrial',n:'Atrial flutter',sev:'warn',ex:'flutter',gen:()=>reg(.8,{p:0},.35),c:['Atrial about 300, ventricular depends on conduction (here 4:1 = 75)','Usually regular','Sawtooth flutter waves','Cannot measure','Narrow'],cause:'Similar to atrial fibrillation: heart disease, lung disease, after surgery.',act:'Rate control, anticoagulation, sometimes cardioversion or ablation.'},
+ {k:'svt',g:'Atrial',n:'Supraventricular tachycardia (SVT)',sev:'crit',gen:()=>reg(.36,{p:0,tc:.2,tw:.04}),c:['150–250','Regular','Hidden in the T waves','Cannot measure','Narrow'],cause:'A short-circuit loop near the AV node. Caffeine, stress, stimulants, electrolyte imbalance.',act:'Stable: vagal maneuvers (bear down), then adenosine 6 mg rapid IV push with a flush, then 12 mg. Warn the patient they may feel a brief pause or chest pressure. Unstable: synchronized cardioversion.'},
+ {k:'jr',g:'Junctional',n:'Junctional rhythm',sev:'warn',gen:()=>reg(1.2,{p:-.12,pr:.07}),c:['40–60','Regular','Upside down, missing, or after the QRS','Short (under 0.12) if a P is seen','Narrow'],cause:'The SA node failed and the AV junction took over. Digoxin toxicity, inferior heart attack, sick sinus.',act:'Check BP and perfusion. Treat like bradycardia if symptomatic.'},
+ {k:'b1',g:'Heart blocks',n:'First-degree AV block',sev:'good',gen:()=>reg(.85,{pr:.32}),c:['Usually 60–100','Regular','Normal, one before every QRS','Longer than 0.20 s, the same every beat','Narrow'],cause:'Beta blockers, amiodarone, digoxin, calcium channel blockers, aging, inferior heart attack.',act:'Usually no treatment. Watch for progression to a higher block.',chf:'Metoprolol and amiodarone both slow the AV node. Report a PR that keeps getting longer day to day.'},
+ {k:'b2a',g:'Heart blocks',n:'Second-degree type I (Wenckebach)',sev:'warn',gen:()=>pTrain(.72,[.16,.26,.34,null]),c:['Atrial normal, ventricular slower','Regularly irregular (grouped beats)','Normal; some are not followed by a QRS','Gets longer each beat until a QRS drops','Narrow'],cause:'Beta blockers, digoxin, inferior heart attack, increased vagal tone.',act:'Usually stable. Monitor, check meds that slow the AV node, treat if symptomatic.'},
+ {k:'b2b',g:'Heart blocks',n:'Second-degree type II (Mobitz II)',sev:'crit',gen:()=>pTrain(.72,[.18,.18,.18,null]),c:['Atrial normal, ventricular slower','Irregular where beats drop','Normal; some are not followed by a QRS','Constant on conducted beats','Often wide'],cause:'Damage below the AV node, often an anterior heart attack.',act:'Dangerous: can suddenly become third-degree block. Pacing pads on, prepare for a pacemaker. Atropine often won\'t help.'},
+ {k:'b3',g:'Heart blocks',n:'Third-degree (complete) heart block',sev:'crit',gen:()=>{const e=[];for(let pc=.2;pc<D+.6;pc+=.62)e.push({t:pc-.01+.16,o:{qrs:'none',pr:.16}});for(let t=.75;t<D+.6;t+=1.55)e.push({t,o:WIDE});return e},c:['Atrial 60–100, ventricular 20–40','Each regular on its own','Present, but unrelated to the QRS','None: varies completely','Wide (ventricular escape) or narrow (junctional escape)'],cause:'No signals get through the AV node. Heart attack, degeneration of the conduction system, drug toxicity.',act:'Emergency. Pacing pads on, transcutaneous pacing, prepare for a permanent pacemaker. Watch for hypotension and syncope.'},
+ {k:'pvc',g:'Ventricular',n:'Premature ventricular contractions (PVCs)',sev:'warn',gen:()=>cyc([{step:.8,o:{}},{step:.8,o:{}},{step:.46,o:{}},{step:1.14,o:WIDE}]),c:['Underlying rate','Irregular at the PVC, then a pause','None before the PVC','None','Wide, bizarre, early; T points the opposite way'],cause:'Low potassium or magnesium, low oxygen, ischemia, caffeine, heart failure (stretched ventricles).',act:'Check the patient, potassium, magnesium and oxygen. Report if new, frequent, multifocal, in runs, or falling on the T wave.',chf:'Furosemide can drop potassium and magnesium, which is a classic cause of new PVCs.'},
+ {k:'big',g:'Ventricular',n:'Ventricular bigeminy',sev:'warn',gen:()=>cyc([{step:.48,o:{}},{step:1.12,o:WIDE}]),c:['Varies','Every other beat early','Only on the normal beats','Normal on normal beats','Normal beat alternates with a wide PVC'],cause:'Same as PVCs.',act:'Same as PVCs. Note the pulse may feel slow because PVCs often don\'t produce a strong pulse.'},
+ {k:'vt',g:'Ventricular',n:'Ventricular tachycardia (VT)',sev:'crit',gen:()=>reg(.37,WIDE),c:['100–250','Usually regular','None visible','None','Wide and bizarre'],cause:'Ischemia, heart attack, cardiomyopathy, heart failure, low potassium or magnesium, long QT.',act:'Check for a pulse first. No pulse: CPR and defibrillation. Pulse but unstable: synchronized cardioversion. Pulse and stable: amiodarone per order.'},
+ {k:'td',g:'Ventricular',n:'Torsades de pointes',sev:'crit',ex:'tors',gen:()=>[],c:['200–250','Irregular','None','None','Wide, twisting around the baseline, getting taller then shorter'],cause:'Long QT: amiodarone, ondansetron, some antibiotics and antipsychotics, low magnesium or potassium.',act:'IV magnesium sulfate per order. Defibrillate if pulseless. Stop QT-prolonging drugs.',chf:'He takes amiodarone. Adding ondansetron or letting magnesium drop raises his risk.'},
+ {k:'vf',g:'Ventricular',n:'Ventricular fibrillation (VF)',sev:'crit',ex:'vf',gen:()=>[],c:['Cannot count','Chaotic','None','None','None: chaotic wavy line'],cause:'Heart attack, untreated VT, electrolyte imbalance, electric shock.',act:'No pulse, no cardiac output. Call a code, start CPR, defibrillate as soon as possible, epinephrine and amiodarone.'},
+ {k:'asy',g:'Ventricular',n:'Asystole',sev:'crit',ex:'asy',gen:()=>[],c:['None','None','None (sometimes P waves only)','None','None: flat line'],cause:'End stage of untreated arrest, severe hypoxia, high potassium, acidosis.',act:'Confirm in two leads and check that leads are attached. CPR, epinephrine, look for reversible causes. Never shock asystole.'},
+ {k:'pace',g:'Paced',n:'Ventricular paced rhythm',sev:'good',spikes:true,gen:()=>reg(.857,WIDE),c:['Set rate (here 70)','Regular','None (ventricular pacing)','None','Wide, right after a sharp pacer spike'],cause:'Permanent or temporary pacemaker.',act:'Check that every spike is followed by a QRS (capture) and that the pacer senses the patient\'s own beats. Report "failure to capture" or "failure to sense."'}
+];
+/* ---------- ischemia ---------- */
+const ISCH=[
+ {k:'nl',n:'Normal for comparison',sev:'good',gen:()=>reg(.8,{}),see:'ST segment flat on the baseline, upright T wave.',do:'Use as your comparison.'},
+ {k:'hyp',n:'Hyperacute T waves',sev:'crit',gen:()=>reg(.8,{t:.75,tw:.07,tc:.27}),see:'Tall, broad T waves. The earliest sign of a heart attack, minutes in.',do:'Repeat the 12-lead in 10 to 15 minutes. It may evolve into ST elevation.'},
+ {k:'stemi',n:'ST elevation',sev:'crit',gen:()=>reg(.8,{st:.4,stc:.11,stw:.06,t:.45,tc:.24}),see:'The segment after the QRS sits above the baseline, like a tombstone or a smile shape.',do:'STEMI: an artery is blocked right now. Rapid response, aspirin, nitroglycerin if BP allows, oxygen if SpO2 is low, cardiac catheterization lab.'},
+ {k:'std',n:'ST depression',sev:'warn',gen:()=>reg(.75,{st:-.2,stc:.1,stw:.045,t:.1,tc:.28}),see:'Segment after the QRS dips below the baseline, flat or sloping down.',do:'Ischemia, possible NSTEMI, or a fast rate. Treat the cause, troponin, serial 12-leads.'},
+ {k:'ti',n:'T wave inversion',sev:'warn',gen:()=>reg(.8,{t:-.32}),see:'T waves point down instead of up.',do:'Ischemia or an older injury. Compare with previous ECGs and get a troponin.'},
+ {k:'q',n:'Pathologic Q waves',sev:'warn',gen:()=>reg(.8,{qamp:-.45,qw:.018,ramp:.6,t:-.2}),see:'A deep, wide downward dip before the R wave (wider than 1 small box).',do:'Dead heart muscle from a past or completing heart attack. Note it in the history and compare with old ECGs.'}
+];
+/* ---------- electrolytes ---------- */
+const LYTE=[
+ {k:'nl2',n:'Normal for comparison',sev:'good',gen:()=>reg(.8,{}),see:'Normal P, QRS, flat ST and smooth T.',do:'Use as your comparison.'},
+ {k:'hk',n:'High potassium, early',sev:'warn',gen:()=>reg(.8,{t:.85,tw:.025,tc:.22,p:.08}),see:'Tall, narrow, peaked T waves ("tented"). P waves start to flatten.',do:'Hold potassium-sparing drugs like spironolactone and supplements. Call the provider. Recheck the lab.'},
+ {k:'hk2',n:'High potassium, severe',sev:'crit',gen:()=>reg(.9,{qrs:'w',p:.03,t:.7,tc:.3,tw:.05}),see:'P waves gone, QRS widening, merging into the T wave toward a sine-wave pattern.',do:'Emergency. Expect calcium gluconate (protects the heart), insulin with dextrose, albuterol, and binders or dialysis.'},
+ {k:'lk',n:'Low potassium',sev:'warn',gen:()=>reg(.8,{st:-.07,stc:.12,t:.08,u:.17,uc:.42}),see:'Flat T waves, a U wave after them, slight ST depression.',do:'Expect a potassium replacement order (never IV push). Check magnesium too.'},
+ {k:'lca',n:'Low calcium',sev:'warn',gen:()=>reg(1.0,{tc:.44}),see:'Long, flat ST segment, which makes the QT long.',do:'Check for tingling, muscle cramps, Chvostek and Trousseau signs. Expect calcium replacement.'},
+ {k:'hca',n:'High calcium',sev:'warn',gen:()=>reg(.8,{tc:.17,tw:.04}),see:'Short ST segment, so a short QT.',do:'Check for weakness, confusion, constipation. Expect fluids and treatment of the cause.'},
+ {k:'lmg',n:'Low magnesium',sev:'warn',gen:()=>reg(.9,{t:.12,tc:.38,u:.12,uc:.55}),see:'Looks like low potassium plus a long QT.',do:'Risk of torsades. Expect IV magnesium. Low magnesium makes low potassium hard to correct.'},
+ {k:'dig',n:'Digoxin effect',sev:'good',gen:()=>reg(.9,{st:-.22,stc:.14,stw:.07,t:.12,tc:.3}),see:'Scooped, sagging ST segment, like a mustache.',do:'An expected effect, not toxicity. Toxicity shows as new arrhythmias, nausea, vision changes, especially with low potassium.'},
+ {k:'lqt',n:'Long QT (amiodarone)',sev:'warn',gen:()=>reg(1.0,{tc:.5,tw:.06}),see:'Long gap from the start of the QRS to the end of the T wave, more than half the distance between R waves.',do:'Avoid adding other QT-prolonging drugs, keep potassium and magnesium normal, watch for torsades.'}
+];
+/* ---------- drawing ---------- */
+const SVGNS='http://www.w3.org/2000/svg';
+let gridId=0;
+function gridDefs(id){return `<defs><pattern id="gm${id}" width="6" height="6" patternUnits="userSpaceOnUse"><path d="M6 0V6H0" fill="none" stroke="var(--grid-minor)" stroke-width=".6"/></pattern><pattern id="gM${id}" width="30" height="30" patternUnits="userSpaceOnUse"><rect width="30" height="30" fill="url(#gm${id})"/><path d="M30 0V30H0" fill="none" stroke="var(--grid-major)" stroke-width="1"/></pattern></defs><rect width="${W}" height="${H}" fill="url(#gM${id})"/>`}
+function sample(def){const o=Object.assign({},def);seed=11;const ev=def.gen().map(e=>({t:e.t,o:Object.assign({},DEF,e.o)}));
+  const ex=def.ex?EX[def.ex]:null;const pts=[];
+  for(let x=0;x<=W;x+=.6){const t=x/PX;let v=0;for(const e of ev){const d=t-e.t;if(d>-.5&&d<.75)v+=beatV(d,e.o)}if(ex)v+=ex(t);pts.push([x,v])}
+  if(def.spikes){for(const e of ev){const x=(e.t-.07)*PX;if(x<1||x>W-1)continue;let i=pts.findIndex(p=>p[0]>=x);if(i<1)continue;const y=pts[i][1];pts.splice(i,0,[x,y],[x,1.6],[x+.4,-.15],[x+.8,y])}}
+  return pts}
+function pathFrom(pts){let d='';for(let i=0;i<pts.length;i++){d+=(i?'L':'M')+pts[i][0].toFixed(1)+' '+(BASE-pts[i][1]*MV).toFixed(1)}return d}
+function marks(){let s='';for(let sec=0;sec<=6;sec+=3){const x=sec*PX+2;s+=`<line x1="${x}" y1="0" x2="${x}" y2="10" stroke="var(--accent)" stroke-width="2"/>`}s+=`<text x="${3*PX+8}" y="12" font-family="var(--f-mono)" font-size="11" fill="var(--muted)">3 s</text><text x="${6*PX+8}" y="12" font-family="var(--f-mono)" font-size="11" fill="var(--muted)">6 s</text>`;return s}
+function drawStrip(host,def,opts={}){const id=++gridId;
+  host.innerHTML=`<svg viewBox="0 0 ${W} ${H}" xmlns="${SVGNS}" role="img" aria-label="${opts.label||'ECG strip'}">${gridDefs(id)}${opts.marks===false?'':marks()}<path d="${pathFrom(sample(def))}" fill="none" stroke="var(--trace)" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/><g class="cal"></g></svg>`;
+  return host.querySelector('svg')}
+function attachCalipers(host,out){let xs=[];
+  host.addEventListener('click',ev=>{const svg=host.querySelector('svg');if(!svg)return;const pt=svg.createSVGPoint();pt.x=ev.clientX;pt.y=ev.clientY;const p=pt.matrixTransform(svg.getScreenCTM().inverse());
+    if(xs.length>=2)xs=[];xs.push(Math.max(0,Math.min(W,p.x)));const g=svg.querySelector('g.cal');
+    g.innerHTML=xs.map(x=>`<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 3"/>`).join('')+(xs.length===2?`<line x1="${Math.min(...xs)}" y1="${H-14}" x2="${Math.max(...xs)}" y2="${H-14}" stroke="var(--accent)" stroke-width="1.5"/>`:'');
+    if(xs.length===1){out.innerHTML='<span>First point set. Click a second point.</span>';return}
+    const dt=Math.abs(xs[1]-xs[0])/PX;const boxes=dt/.04;const rate=dt>0?Math.round(60/dt):0;
+    out.innerHTML=`<span>Interval <b>${dt.toFixed(2)} s</b></span><span><b>${boxes.toFixed(1)}</b> small boxes</span><span>If R to R: <b>${rate}</b> per minute</span><button type="button" class="calreset">Clear</button>`;
+    out.querySelector('.calreset').onclick=e=>{e.stopPropagation();xs=[];g.innerHTML='';out.innerHTML='<span>Calipers: click two points on the strip.</span>'}
+  });
+  return ()=>{xs=[];out.innerHTML='<span>Calipers: click two points on the strip.</span>'}}
+const sevTag=s=>`<span class="tag ${s}">${s==='crit'?'urgent':s==='warn'?'watch':'usually benign'}</span>`;
+/* hero */
+drawStrip(document.getElementById('heroStrip'),{gen:()=>reg(.8,{})},{label:'Normal sinus rhythm'});
+/* beat anatomy */
+(function(){const host=document.getElementById('beatAnatomy');const BW=900,BH=335,bx=60,PS=980,MS=110,BB=200,t0=-.26;
+  const o=Object.assign({},DEF,{u:.07});const X=t=>bx+(t-t0)*PS;let d='';for(let t=t0;t<=.56;t+=.002){d+=(t===t0?'M':'L')+X(t).toFixed(1)+' '+(BB-beatV(t,o)*MS).toFixed(1)}
+  const br=(x1,x2,y,lab,sub)=>`<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="var(--accent)" stroke-width="1.5"/><line x1="${x1}" y1="${y-6}" x2="${x1}" y2="${y+6}" stroke="var(--accent)" stroke-width="1.5"/><line x1="${x2}" y1="${y-6}" x2="${x2}" y2="${y+6}" stroke="var(--accent)" stroke-width="1.5"/><text x="${(x1+x2)/2}" y="${y+20}" text-anchor="middle" font-family="var(--f-display)" font-weight="700" font-size="15" fill="var(--ink)">${lab}</text>${sub?`<text x="${(x1+x2)/2}" y="${y+36}" text-anchor="middle" font-family="var(--f-mono)" font-size="12" fill="var(--muted)">${sub}</text>`:''}`;
+  const lab=(x,y,t)=>`<text x="${x}" y="${y}" text-anchor="middle" font-family="var(--f-display)" font-weight="800" font-size="18" fill="var(--accent)">${t}</text>`;
+  const id=++gridId;
+  host.innerHTML=`<svg viewBox="0 0 ${BW} ${BH}" xmlns="${SVGNS}" role="img" aria-label="One heartbeat labeled with P wave, PR interval, QRS complex, ST segment, T wave, U wave and QT interval"><defs><pattern id="am${id}" width="9.8" height="9.8" patternUnits="userSpaceOnUse"><path d="M9.8 0V9.8H0" fill="none" stroke="var(--grid-minor)" stroke-width=".6"/></pattern></defs><rect width="${BW}" height="${BH}" fill="url(#am${id})"/>
+  <line x1="${bx}" y1="${BB}" x2="${BW-20}" y2="${BB}" stroke="var(--grid-major)" stroke-dasharray="3 4"/>
+  <path d="${d}" fill="none" stroke="var(--trace)" stroke-width="2.4" stroke-linejoin="round"/>
+  ${lab(X(-.15),BB-35,'P')}${lab(X(-.04),BB+30,'Q')}${lab(X(0)+16,BB-125,'R')}${lab(X(.035),BB+46,'S')}${lab(X(.26),BB-52,'T')}${lab(X(.46),BB-25,'U')}
+  ${br(X(-.215),X(-.04),40,'PR interval','0.12–0.20 s')}
+  ${br(X(-.04),X(.04),BB+78,'QRS','0.06–0.10 s')}
+  ${br(X(.045),X(.17),BB+78,'ST segment','')}
+  ${br(X(-.04),X(.38),100,'QT interval','varies with rate')}
+  </svg>`})();
+/* worked example */
+(function(){const host=document.getElementById('workedStrip');const WW=1000,WH=240,P2=250,M2=100,B2=165,id=++gridId;
+  const o=Object.assign({},DEF);const Rs=[.45,1.85,3.25];const X=t=>t*P2;let d='';
+  for(let x=0;x<=WW;x+=.8){const t=x/P2;let v=0;for(const r of Rs){const dd=t-r;if(dd>-.5&&dd<.75)v+=beatV(dd,o)}d+=(x?'L':'M')+x.toFixed(1)+' '+(B2-v*M2).toFixed(1)}
+  const br=(x1,x2,y,lab,up)=>`<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="var(--accent)" stroke-width="2"/><line x1="${x1}" y1="${y-7}" x2="${x1}" y2="${y+7}" stroke="var(--accent)" stroke-width="2"/><line x1="${x2}" y1="${y-7}" x2="${x2}" y2="${y+7}" stroke="var(--accent)" stroke-width="2"/><text x="${(x1+x2)/2}" y="${up?y-10:y+22}" text-anchor="middle" font-family="var(--f-body)" font-weight="700" font-size="15" fill="var(--accent)">${lab}</text>`;
+  let ticks='';for(let i=1;i<35;i++){const x=X(Rs[0])+i*10;ticks+=`<line x1="${x}" y1="${B2-6}" x2="${x}" y2="${B2+6}" stroke="var(--accent)" stroke-width="${i%5?1:2}" opacity=".7"/>`}
+  host.innerHTML=`<svg viewBox="0 0 ${WW} ${WH}" xmlns="${SVGNS}" role="img" aria-label="Sinus bradycardia strip with 35 small boxes between R waves, PR interval of 4 boxes, QRS width of 2 boxes"><defs><pattern id="wm${id}" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M10 0V10H0" fill="none" stroke="var(--grid-minor)" stroke-width=".7"/></pattern><pattern id="wM${id}" width="50" height="50" patternUnits="userSpaceOnUse" y="15"><rect width="50" height="50" fill="url(#wm${id})"/><path d="M50 0V50H0" fill="none" stroke="var(--grid-major)" stroke-width="1.2"/></pattern></defs><rect width="${WW}" height="${WH}" fill="url(#wM${id})"/>
+  ${ticks}<path d="${d}" fill="none" stroke="var(--trace)" stroke-width="2.2" stroke-linejoin="round"/>
+  ${br(X(Rs[0]),X(Rs[1]),30,'35 boxes → 1500 ÷ 35 ≈ 43 per minute',false)}
+  ${br(X(Rs[1]),X(Rs[2]),30,'35 boxes again → regular',false)}
+  ${br(X(1.65),X(1.81),205,'PR: 4 boxes = 0.16 s',false)}
+  ${br(X(3.21),X(3.29),205,'QRS: 2 boxes = 0.08 s',false)}
+  </svg>`})();
+/* theme toggle */
+(function(){const root=document.documentElement,btn=document.getElementById('themeBtn'),lbl=document.getElementById('themeLbl');
+  const mq=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
+  const cur=()=>root.dataset.theme||(mq&&mq.matches?'dark':'light');
+  const paint=()=>{lbl.textContent=cur()==='dark'?'Switch to light mode':'Switch to dark mode'};
+  try{const saved=localStorage.getItem('ecg-theme');if(saved==='dark'||saved==='light')root.dataset.theme=saved}catch(e){}
+  paint();if(mq&&mq.addEventListener)mq.addEventListener('change',paint);
+  btn.onclick=()=>{const next=cur()==='dark'?'light':'dark';root.dataset.theme=next;try{localStorage.setItem('ecg-theme',next)}catch(e){}paint()}})();
+/* library */
+function buildChips(list,host,key,onPick,grouped){host.innerHTML='';const btns=[];
+  if(grouped){const groups=[...new Set(list.map(r=>r.g))];groups.forEach(g=>{const wrap=document.createElement('div');wrap.className='chipgroup';wrap.innerHTML=`<span class="lbl">${g}</span><div class="chips"></div>`;const c=wrap.querySelector('.chips');list.filter(r=>r.g===g).forEach(r=>{const b=document.createElement('button');b.type='button';b.textContent=r.n;b.dataset.k=r.k;b.onclick=()=>onPick(r);c.appendChild(b);btns.push(b)});host.appendChild(wrap)})}
+  else list.forEach(r=>{const b=document.createElement('button');b.type='button';b.textContent=r.n;b.dataset.k=r.k;b.onclick=()=>onPick(r);host.appendChild(b);btns.push(b)});
+  return k=>btns.forEach(b=>b.classList.toggle('on',b.dataset.k===k))}
+const libStrip=document.getElementById('libStrip'),libCal=document.getElementById('libCal');const resetLib=attachCalipers(libStrip,libCal);
+const labels=['Rate','Rhythm','P waves','PR interval','QRS'];
+let markLib;function showLib(r){drawStrip(libStrip,r,{label:r.n});resetLib();
+  document.getElementById('libName').textContent=r.n;document.getElementById('libTag').innerHTML=sevTag(r.sev);
+  document.getElementById('libCrit').innerHTML=r.c.map((v,i)=>`<dt>${labels[i]}</dt><dd>${v}</dd>`).join('');
+  document.getElementById('libCause').textContent=r.cause;document.getElementById('libAct').textContent=r.act;
+  const w=document.getElementById('libChfWrap');w.hidden=!r.chf;document.getElementById('libChf').textContent=r.chf||'';markLib(r.k)}
+markLib=buildChips(RH,document.getElementById('libChips'),'k',showLib,true);showLib(RH[0]);
+function simpleViewer(list,pre){const mark=buildChips(list,document.getElementById(pre+'Chips'),'k',show,false);
+  function show(r){drawStrip(document.getElementById(pre+'Strip'),r,{label:r.n,marks:false});document.getElementById(pre+'Name').textContent=r.n;document.getElementById(pre+'Tag').innerHTML=sevTag(r.sev);document.getElementById(pre+'See').textContent=r.see;document.getElementById(pre+'Do').textContent=r.do;mark(r.k)}
+  show(list[pre==='isch'?2:1])}
+simpleViewer(ISCH,'isch');simpleViewer(LYTE,'lyte');
+/* quiz */
+const POOL=RH.map(r=>({k:r.k,n:r.n,g:r.g,def:r,exp:`${r.c.map((v,i)=>labels[i]+': '+v).join(' · ')}`})).concat(ISCH.filter(r=>r.k!=='nl').map(r=>({k:r.k,n:r.n,g:'Ischemia',def:r,exp:r.see})),LYTE.filter(r=>r.k!=='nl2').map(r=>({k:r.k,n:r.n,g:'Electrolytes',def:r,exp:r.see})));
+const qStrip=document.getElementById('qStrip'),qCal=document.getElementById('qCal'),qOpts=document.getElementById('qOpts'),qMsg=document.getElementById('qMsg'),qExplain=document.getElementById('qExplain'),qScore=document.getElementById('qScore');
+const resetQ=attachCalipers(qStrip,qCal);let qn=0,right=0,answered=0,cur=null,done=false,last=null;
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+function nextQ(){let c;do{c=POOL[Math.floor(Math.random()*POOL.length)]}while(c===last);last=c;cur=c;done=false;qn++;
+  const same=shuffle(POOL.filter(p=>p!==c&&p.g===c.g)).slice(0,2);const other=shuffle(POOL.filter(p=>p!==c&&!same.includes(p))).slice(0,3-same.length);
+  const opts=shuffle([c,...same,...other]);drawStrip(qStrip,c.def,{label:'Mystery strip'});resetQ();
+  qOpts.innerHTML='';opts.forEach(o=>{const b=document.createElement('button');b.type='button';b.textContent=o.n;b.onclick=()=>answer(o,b);qOpts.appendChild(b)});
+  qMsg.textContent='';qExplain.textContent='';updScore()}
+function updScore(){qScore.textContent=`Question ${qn} · Score ${right} of ${answered}`}
+function answer(o,b){if(done)return;done=true;answered++;const ok=o===cur;if(ok)right++;
+  [...qOpts.children].forEach(x=>{if(x.textContent===cur.n)x.classList.add('right')});if(!ok)b.classList.add('wrong');
+  qMsg.textContent=ok?'Correct.':'Not quite. The answer is highlighted.';qExplain.textContent=cur.exp;updScore()}
+document.getElementById('qNext').onclick=()=>{if(!done&&qn>0){qMsg.textContent='Skipped. The answer is highlighted. Click Next strip for a new one.';done=true;answered++;updScore();[...qOpts.children].forEach(x=>{if(x.textContent===cur.n)x.classList.add('right')});qExplain.textContent=cur.exp;return}nextQ()};
+nextQ();
+})();
+</script>
+
+</body>
+</html>
